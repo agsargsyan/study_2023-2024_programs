@@ -1,8 +1,8 @@
 #!/usr/bin/gnuplot --persist
 
 set terminal png crop
-set output 'ping.png'
+set output 'results/ping.png'
 set xlabel "Sequence number"
 set ylabel "Delay (ms)"
 set grid
-plot "ping.dat" with lines
+plot "results/ping.dat" with lines linecolor "black"

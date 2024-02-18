@@ -1,15 +1,14 @@
-all: ping.dat ping.png plot
+all:  run plot
 
-ping.dat:
-	sudo python test8.py
+run:
+	sudo python main.py
 
-plot: iperf3.json
-	plot_iperf.sh iperf3.json
-
-ping.png: ping.dat
-	gnuplot ping_plot
+plot: 
+	sudo python all.py
+	gnuplot plots.plt
 
 clean:
-	-rm -f *.dat *.pdf *.json *.csv
-	-rm -rf results
+	sudo rm -f *.dat *.pdf *.json *.csv
+	sudo rm -rf results/*
+	sudo rm -rf output/*
 	sudo mn -c

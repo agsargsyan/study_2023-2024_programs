@@ -1,4 +1,4 @@
-all:  run plot
+all:  clean run plot
 
 run:
 	sudo python main.py

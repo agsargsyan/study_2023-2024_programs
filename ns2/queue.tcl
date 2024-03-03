@@ -9,7 +9,7 @@ $redq set maxthresh_ 150
 $redq set q_weight_ 0.002
 $redq set linterm_ 10
 $redq set drop-tail_ true
-$redq set gentle_ false
+#$redq set gentle_ false
 $redq set queue-in-bytes false
 
 #мониторинг параметров длины очереди:
@@ -33,9 +33,9 @@ set qmon [$ns monitor-queue $node_(r0) $node_(r1) [open output/qm.out w]]
 #$redq set double_slope_ 1
 
 #Группа адаптивных алгоритмов
-#$redq set adaptive_ 1
+$redq set adaptive_ 1
 #$redq set feng_adaptive_ 1
 #$redq set refined_adaptive_ 1
 #$redq set fast_adaptive_ 1
-#$redq set powared_ 1
+$redq set powared_ 1
 

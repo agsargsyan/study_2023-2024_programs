@@ -8,7 +8,7 @@ set title "RTT over time"
 unset key
 set grid
 set style data lines
-FILES = system("ls -1 *.dat")
+FILES = system("ls -1 combined.dat")
 plot for [data in FILES] data u 2:($8/1000) with lines linecolor rgb "black" notitle
 
 
@@ -23,7 +23,7 @@ set title "Sent Cwnd over time"
 unset key
 set grid
 set style data lines
-FILES = system("ls -1 *.dat")
+FILES = system("ls -1 combined.dat")
 plot for [data in FILES] data u 2:($7/500) with lines linecolor rgb "black" notitle
 
 
@@ -38,6 +38,19 @@ set title "RTT Var over time"
 unset key
 set grid
 set style data lines
-FILES = system("ls -1 *.dat")
+FILES = system("ls -1 combined.dat")
 plot for [data in FILES] data u 2:($9/1000) with lines linecolor rgb "black" notitle
 
+
+set terminal postscript eps
+set output 'results/queue.eps'
+set datafile separator " "
+set xlabel "Time (sec)"
+set ylabel "Queue length [pkt]"
+set yrange [0:*]
+set title "Queue length over time"
+unset key
+set grid
+set style data lines
+FILES = system("ls -1 queue.dat")
+plot for [data in FILES] data u 1:8 with lines linecolor rgb "black" notitle

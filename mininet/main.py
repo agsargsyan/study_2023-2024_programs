@@ -4,6 +4,7 @@ from mininet.node import Node
 from mininet.log import setLogLevel, info
 from mininet.cli import CLI
 from threading import Thread
+import threading
 import time
 
 #класс для создание маршрутизаторов
@@ -26,8 +27,8 @@ class NetworkTopo(Topo):
         s1 = self.addSwitch('s1')
         s2 = self.addSwitch('s2')
         #соединение между маршрутизаторами и коммутаторами
-        self.addLink(s1, r0, intfName2='r0-eth1', params2={'ip': '10.0.0.1/24'})
-        self.addLink(s2, r1, intfName2='r1-eth1', params2={'ip': '10.1.0.1/24'})
+        self.addLink(s1, r0, intfName2='r0-eth1', params2={'ip': '10.0.0.1/24'}, max_queue_size=300)
+        self.addLink(s2, r1, intfName2='r1-eth1', params2={'ip': '10.1.0.1/24'}, max_queue_size=300)
         #соединение между маршрутизаторами
         self.addLink(r0, r1, 
         		intfName1='r0-eth2', 
@@ -45,16 +46,22 @@ class NetworkTopo(Topo):
             switch = s1 if i % 2 == 1 else s2
             self.addLink(host, switch, bw = 100)
             
-# Функция для мониторинга очереди
-def monitor_queue(net, interface, interval=1, output_file='queue_monitor.log'):
+import time
+
+def monitor_queue(net, interface, interval=0.1, output_file='queue_monitor.log'):
     with open(output_file, 'w') as file:
         try:
+            start_time = time.time()  # Запоминаем время начала мониторинга
             while True:
+                current_time = time.time() - start_time  # Вычисляем текущее время моделирования
                 result = net['r0'].cmd(f'tc -s qdisc show dev {interface}')
-                print(result, file=file)
+                # Записываем текущее время моделирования и результат команды
+                file.write(f"Time: {current_time:.2f} seconds\n{result}\n")
+                file.flush()  # Принудительно записываем данные на диск
                 time.sleep(interval)
         except KeyboardInterrupt:
             print("Мониторинг завершен")
+
  
              
 #Функция для запуска iperf между парой хостов
@@ -62,15 +69,15 @@ def run_iperf(net, host1_name, host2_name):
     h1 = net.get(host1_name)
     h2 = net.get(host2_name)
     # Запуск iperf сервера на втором хосте
-    h2.cmdPrint("iperf3 -s -D")
+    h2.cmd("iperf3 -s -D")
     # Запуск iperf клиента на первом хосте, соединяющегося со вторым хостом
     h1.cmd(f"mkdir -p output/{host1_name}_to_{host2_name}")
-    h1.cmdPrint(f'iperf3 -c {h2.IP()} -t 26 -J > output/{host1_name}_to_{host2_name}/{host1_name}_to_{host2_name}_iperf3.json')
+    h1.cmd(f'iperf3 -c {h2.IP()} -t 30 -J > output/{host1_name}_to_{host2_name}/{host1_name}_to_{host2_name}_iperf3.json')
     h1.cmd(f"cd output/{host1_name}_to_{host2_name} && plot_iperf.sh {host1_name}_to_{host2_name}_iperf3.json")
 
 
-def monitor_queue(net, interface="r0-eth2", interval=1, output_file='queue_monitor.log'):
-    t = threading.currentThread()
+def monitor_queue(net, interface="r0-eth2", interval=0.5, output_file='queue_monitor.txt'):
+    t = threading.current_thread()
     with open(output_file, 'w') as file:
         while getattr(t, "do_run", True):
             result = net['r0'].cmd(f'tc -s qdisc show dev {interface}')
@@ -103,7 +110,6 @@ def run(num_hosts_subnets=20):
 	    else:
 	     host.cmd(f"sudo tc qdisc add dev h{i}-eth0 root netem delay 15ms") 
 
-
     #настройка алгоритма RED
     avpkt = 500
     limit = avpkt * 300
@@ -116,31 +122,29 @@ def run(num_hosts_subnets=20):
     net['r0'].cmdPrint("tc qdisc add dev r0-eth2 root handle 1: red limit {} min {} max {} avpkt {} bandwidth {} probability {}".format(limit, min_, max_, avpkt, bandwidth, probability))
 
     net.start()
+
+    # Запуск мониторинга в отдельном потоке
+    monitor_thread = Thread(target=monitor_queue, args=(net,))
+    monitor_thread.start()  # Запуск потока мониторинга
+
     threads = []
-            
-    # Пример: запуск iperf между несколькими парами хостов
+    # Запуск iperf в отдельных потоках
     for i in range(1, 2*num_hosts_subnets, 2):
         host1 = f'h{i}'
         host2 = f'h{i+1}'
         t = Thread(target=run_iperf, args=(net, host1, host2))
         t.start()
         threads.append(t)
-        
-        
-  
-    # Ожидание завершения всех потоков
+
     for t in threads:
-        t.join()
-    
-       
-    #Мониторинг параметров RED    
-    print(net['r0'].cmd("tc -s qdisc show dev r0-eth2"))
-    #CLI(net)
-    net.stop() # Остановка сети
+        t.join()  # Ожидание завершения всех потоков iperf
 
+    # Остановка мониторинга
+    monitor_thread.do_run = False  # Сигнал потоку мониторинга остановиться
+    monitor_thread.join()  # Ожидание завершения потока мониторинга
 
-#запуск программы
+    net.stop()  # Остановка сети
+
 if __name__ == '__main__':
     setLogLevel('info')
     run()
-

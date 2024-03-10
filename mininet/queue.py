@@ -1,4 +1,6 @@
 import re
+from main import iperf_time
+
 
 def extract_numbers(s):
     """Извлекает числа из строки, включая отрицательные и дробные."""
@@ -13,7 +15,7 @@ def process_qdisc_data(input_file, output_file):
     total_blocks = len([b for b in blocks if b.strip() != ""])  # Подсчет непустых блоков
 
     # Вычисление коэффициента масштабирования для индексов
-    scale_factor = 30 / total_blocks if total_blocks > 0 else 0
+    scale_factor = iperf_time / total_blocks if total_blocks > 0 else 0
 
     with open(output_file, 'w') as f:
         for i, block in enumerate(blocks):
